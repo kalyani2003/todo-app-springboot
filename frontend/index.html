@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>To-Do List</title>
+    <style>
+        body { font-family: Arial; text-align: center; margin-top: 40px; }
+        input, button { padding: 8px; margin: 5px; font-size: 16px; }
+        ul { list-style: none; padding: 0; }
+        li {
+          background: #f2f2f2;
+          margin: 10px auto;
+          padding: 10px;
+          width: 400px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .btns button { margin-left: 5px; }
+    </style>
+</head>
+<body>
+<h2>To-Do List</h2>
+<input id="task-input" placeholder="Enter task">
+<button id="add-btn" onclick="addTask()">Add</button>
+
+<ul id="task-list"></ul>
+
+<script>
+    let editId = null;
+
+    async function loadTasks() {
+      const res = await fetch('http://localhost:8080/api/tasks');
+      const data = await res.json();
+      const list = document.getElementById('task-list');
+      list.innerHTML = '';
+
+      data.forEach(task => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <span>${task.title}</span>
+          <div class="btns">
+            <button onclick="editTask('${task.id}', '${task.title}')">Edit</button>
+            <button onclick="deleteTask('${task.id}')">Delete</button>
+          </div>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    async function addTask() {
+      const title = document.getElementById('task-input').value;
+      if (!title.trim()) return;
+
+      const url = editId
+        ? \`http://localhost:8080/api/task/\${editId}\`
+        : 'http://localhost:8080/api/task';
+
+      const method = editId ? 'PUT' : 'POST';
+
+      await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: title, completed: false })
+      });
+
+      document.getElementById('task-input').value = '';
+      document.getElementById('add-btn').innerText = 'Add';
+      editId = null;
+      loadTasks();
+    }
+
+    function editTask(id, title) {
+      document.getElementById('task-input').value = title;
+      document.getElementById('add-btn').innerText = 'Update';
+      editId = id;
+    }
+
+    async function deleteTask(id) {
+      await fetch(\`http://localhost:8080/api/task/\${id}\`, { method: 'DELETE' });
+      loadTasks();
+    }
+
+    window.onload = loadTasks;
+</script>
+</body>
+</html>
